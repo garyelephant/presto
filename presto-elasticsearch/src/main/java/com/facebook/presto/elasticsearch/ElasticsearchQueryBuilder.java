@@ -122,6 +122,7 @@ public class ElasticsearchQueryBuilder
     }
 
     // TODO: 这个方法没有看懂，看起来是没有做任何关于aggs的下推操作
+    // TODO: 比如SQL中的where条件，这里能够下推吗？
     // 做了选取指定field的操作
     private QueryBuilder buildSearchQuery()
     {

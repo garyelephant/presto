@@ -93,7 +93,7 @@ public class ElasticsearchSplitManager
                         group.getShardId().getId(),
                         currentNode.getHostName(),
                         currentNode.getAddress().getPort(),
-                        layoutHandle.getTupleDomain());
+                        layoutHandle.getTupleDomain()); // TODO: layoutHandle 是啥？TupleDomain 是啥？
                 splits.add(split);
             }
         }

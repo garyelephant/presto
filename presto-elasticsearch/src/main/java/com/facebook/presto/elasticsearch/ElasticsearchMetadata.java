@@ -67,6 +67,7 @@ public class ElasticsearchMetadata
         return new ElasticsearchTableHandle(tableName.getSchemaName(), tableName.getTableName());
     }
 
+    // TODO: TableLayouts 是什么？
     @Override
     public List<ConnectorTableLayoutResult> getTableLayouts(ConnectorSession session, ConnectorTableHandle table, Constraint<ColumnHandle> constraint, Optional<Set<ColumnHandle>> desiredColumns)
     {

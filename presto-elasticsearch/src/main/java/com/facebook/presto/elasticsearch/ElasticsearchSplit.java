@@ -34,6 +34,7 @@ public class ElasticsearchSplit
     private final int shard;
     private final String searchNode;
     private final int port;
+    // TODO: TupleDomain 是啥？
     private final TupleDomain<ColumnHandle> tupleDomain;
 
     @JsonCreator
