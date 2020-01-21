@@ -200,6 +200,12 @@ public class ElasticsearchClient
         }
         TransportClient client = clients.get(tableDescription.getClusterName());
         verify(client != null, "client is null");
+        // TODO: 根据索引名称前缀搜索索引时，每次都需要连接ES查询元数据，效率会比较低，解决方案：
+        //   Presto Coord内部缓存ES Cluster State，同时使用ES Plugin(IndexModule Listener)来更新最新的Cluster State
+        //    https://dzone.com/articles/elasticsearch5-how-to-build-a-plugin-and-add-a-lis
+        //    https://github.com/elastic/elasticsearch/issues/1242
+        //    https://stackoverflow.com/questions/53927354/elasticsearch-event-listener
+        //    https://www.elastic.co/guide/en/elasticsearch/reference/current/xpack-alerting.html
         String[] indices = getIndices(client, new GetIndexRequest());
         return Arrays.stream(indices)
                     .filter(index -> index.startsWith(tableDescription.getIndex()))

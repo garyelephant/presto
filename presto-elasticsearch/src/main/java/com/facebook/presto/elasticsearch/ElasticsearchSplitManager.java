@@ -21,6 +21,7 @@ import com.facebook.presto.spi.FixedSplitSource;
 import com.facebook.presto.spi.connector.ConnectorSplitManager;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.elasticsearch.action.admin.cluster.shards.ClusterSearchShardsGroup;
 import org.elasticsearch.action.admin.cluster.shards.ClusterSearchShardsResponse;
 import org.elasticsearch.cluster.node.DiscoveryNode;
@@ -55,19 +56,43 @@ public class ElasticsearchSplitManager
         ElasticsearchTableDescription table = client.getTable(tableHandle.getSchemaName(), tableHandle.getTableName());
         verify(table != null, "Table no longer exists: %s", tableHandle.toString());
 
+        // TODO: 如果生成Split后，SourceTask执行前，ES Index的Shard发生了relocation怎么办？
         List<String> indices = client.getIndices(table);
         ImmutableList.Builder<ConnectorSplit> splits = ImmutableList.builder();
         for (String index : indices) {
             ClusterSearchShardsResponse response = client.getSearchShards(index, table);
             DiscoveryNode[] nodes = response.getNodes();
+            // Note: DiscoveryNode 是啥 ? Answer: Shard所在的DataNode.
+
+            ImmutableMap.Builder<String, DiscoveryNode> nodeIdMapBuilder = ImmutableMap.builder();
+            for (DiscoveryNode discoveryNode : nodes) {
+                // TODO: 用哪个ID？
+                // nodeIdMap.put(discoveryNode.getEphemeralId(), discoveryNode);
+                nodeIdMapBuilder.put(discoveryNode.getId(), discoveryNode);
+            }
+
+            ImmutableMap<String, DiscoveryNode> nodeIdMap = nodeIdMapBuilder.build();
+
             for (ClusterSearchShardsGroup group : response.getGroups()) {
-                int nodeIndex = group.getShardId().getId() % nodes.length;
+
+                // Note: 当Presto与ES混部署时，如何实现数据本地性？Answer: 逻辑在这里
+                // Note: ClusterSearchShardsGroup 指的shard包含primary + replica ？ 所以是 group ? 从这个类的私有成员ShardRouting列表来看是这样的
+                // TODO: 选取哪个shard副本(本质上是选取这个shard所在的Node)的逻辑也可以优化，目前先默认选择了第一个
+                //   可供参考的选取方式如下：
+                //   （1）Presto Coord 中存储对应Shard的请求次数，据此信息每次来选取请求次数最少的那个Shard
+                //   （2）利用ES的ARS来选择，问题是如何调用ARS算法，获取到ARS的结果
+                //   （3）随机选择
+                int shardCopyCount = group.getShards().length;
+                int selectedShardCopyIndex = 0; // TODO: 优化选择方式
+                String currentNodeId = group.getShards()[selectedShardCopyIndex].currentNodeId();
+                DiscoveryNode currentNode = nodeIdMap.get(currentNodeId);
+
                 ElasticsearchSplit split = new ElasticsearchSplit(
                         index,
                         table.getType(),
                         group.getShardId().getId(),
-                        nodes[nodeIndex].getHostName(),
-                        nodes[nodeIndex].getAddress().getPort(),
+                        currentNode.getHostName(),
+                        currentNode.getAddress().getPort(),
                         layoutHandle.getTupleDomain());
                 splits.add(split);
             }

@@ -229,6 +229,7 @@ public class ElasticsearchRecordCursor
             for (SearchHit hit : response.getHits().getHits()) {
                 result.add(hit);
             }
+            // TODO: 此处可以尝试使用scroll的slice功能，进一步提升数据读取并行度
             response = getScrollResponse(queryBuilder, response.getScrollId());
             if (response.getHits().getHits().length == 0) {
                 break;

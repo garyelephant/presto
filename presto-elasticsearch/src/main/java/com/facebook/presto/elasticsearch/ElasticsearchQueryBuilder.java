@@ -86,6 +86,7 @@ public class ElasticsearchQueryBuilder
         catch (UnknownHostException e) {
             throw new PrestoException(ELASTICSEARCH_CONNECTION_ERROR, format("Error connecting to search node (%s:%d)", split.getSearchNode(), split.getPort()), e);
         }
+        // TODO: 如果把需要的数据的明细都scroll出来，再在Presto中计算，会很慢（并且还没有cache）
         client = createTransportClient(config, new TransportAddress(address, split.getPort()));
         scrollTimeout = config.getScrollTimeout();
         scrollSize = config.getScrollSize();
@@ -108,7 +109,7 @@ public class ElasticsearchQueryBuilder
                 .setScroll(new TimeValue(scrollTimeout.toMillis()))
                 .setFetchSource(fields.toArray(new String[0]), null)
                 .setQuery(buildSearchQuery())
-                .setPreference("_shards:" + shard)
+                .setPreference("_shards:" + shard) // TODO：已经指定了Preference，但是需要再增加一个 _local 参数
                 .setSize(scrollSize);
         LOG.debug("Elasticsearch Request: %s", searchRequestBuilder);
         return searchRequestBuilder;
@@ -120,6 +121,8 @@ public class ElasticsearchQueryBuilder
                 .setScroll(new TimeValue(scrollTimeout.toMillis()));
     }
 
+    // TODO: 这个方法没有看懂，看起来是没有做任何关于aggs的下推操作
+    // 做了选取指定field的操作
     private QueryBuilder buildSearchQuery()
     {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
