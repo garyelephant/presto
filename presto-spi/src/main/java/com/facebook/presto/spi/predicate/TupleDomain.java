@@ -41,9 +41,21 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
-/**
+/**q
  * Defines a set of valid tuples according to the constraints on each of its constituent columns
+ *
+ * Note[2020.01.21] 有同学可能会疑问，饶了这么大的弯子，搞得这么复杂就是为了表达一个 where 条件，
+ * 为什么不直接用类似SQL里面的 Where 条件的语法来表达，既简单又直接?
+ *
+ * 我的理解是这样的： 首先 Presto 是一个可以查询异构数据源的引擎，它不止支持关系型数据库，也支持非关系型数据库比如文件存储，
+ * 文件存储系统可不识别什么 SQL 的 Where语法哦；而且即使是关系型数据库，不同的数据库的语法也不一样，
+ * 因此一种中立的表达数据约束条件的 DSL 还是蛮有必要的。另外 Presto 里面不止要能够表达这个数据约束条件，
+ * 而且在各种优化器的规则里面还需要能够对这个数据约束条件进行转换、替换、修改，因此必须要用一种命令式的方式来表达，
+ * 而不能用SQL那样的声明式方式来表达。
+ * 来源于：https://www.jianshu.com/p/4d4bc347df80
  */
+// Note[2020.01.21] TupleDomain用来表达 table 里面各个字段的约束条件、取值范围的。
+//     TupleDomain 是对Domain的简单封装, 维护了一个字段名到对应的Domain的映射关系，表示一个表里面多个字段的取值约束条件。
 public final class TupleDomain<T>
 {
     /**

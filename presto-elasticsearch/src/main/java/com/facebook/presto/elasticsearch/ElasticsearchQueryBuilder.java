@@ -97,6 +97,7 @@ public class ElasticsearchQueryBuilder
         client.close();
     }
 
+    // TODO: 如果不做下推，都是scroll，计算效率应该还是挺低的
     public SearchRequestBuilder buildScrollSearchRequest()
     {
         String indices = index != null && !index.isEmpty() ? index : "_all";

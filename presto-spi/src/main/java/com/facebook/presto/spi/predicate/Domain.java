@@ -38,6 +38,7 @@ import static java.util.Objects.requireNonNull;
  * </ul>
  * <p>
  */
+// Note[2020.01.21]: Domain 只是对ValueSet的简单包装
 public final class Domain
 {
     private final ValueSet values;
