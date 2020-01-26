@@ -116,6 +116,7 @@ public class ElasticsearchMetadata
                     new ElasticsearchColumnHandle(
                         column.getName(),
                         column.getType(),
+                        // Note[2020.01.26] jsonPath是通过定期获取index的mappings，根据properties属性拼接而来的。
                         String.valueOf(properties.get("jsonPath")),
                         String.valueOf(properties.get("jsonType")),
                         position,

@@ -74,6 +74,7 @@ public class ElasticsearchQueryBuilder
         requireNonNull(config, "config is null");
         requireNonNull(split, "split is null");
 
+        // TODO: 这里是projection columns(select *) ? 可能还包括where中的columns
         columns = columnHandles;
         tupleDomain = split.getTupleDomain();
         index = split.getIndex();
@@ -97,7 +98,9 @@ public class ElasticsearchQueryBuilder
         client.close();
     }
 
-    // TODO: 如果不做下推，都是scroll，计算效率应该还是挺低的
+    // TODO: 在aggs场景下，如果不做下推，都是scroll，计算效率应该还是挺低的，要看scroll数据从ES获取、传输到Presto的效率了
+    // TODO：ES Scroll 性能测试
+    // Note[2020.01.23] projection(select ?), predict(where ?) 有下推
     public SearchRequestBuilder buildScrollSearchRequest()
     {
         String indices = index != null && !index.isEmpty() ? index : "_all";
@@ -108,9 +111,11 @@ public class ElasticsearchQueryBuilder
                 .setTypes(type)
                 .setSearchType(QUERY_THEN_FETCH)
                 .setScroll(new TimeValue(scrollTimeout.toMillis()))
+                // Note[2020.01.23] select fields projection
                 .setFetchSource(fields.toArray(new String[0]), null)
+                // Note[2020.01.23] where 条件下推
                 .setQuery(buildSearchQuery())
-                .setPreference("_shards:" + shard) // TODO：已经指定了Preference，但是需要再增加一个 _local 参数
+                .setPreference("_shards:" + shard) // TODO：已经指定了Preference，但是需要再增加一个 _local 参数, _shards:n|_local
                 .setSize(scrollSize);
         LOG.debug("Elasticsearch Request: %s", searchRequestBuilder);
         return searchRequestBuilder;
@@ -122,15 +127,16 @@ public class ElasticsearchQueryBuilder
                 .setScroll(new TimeValue(scrollTimeout.toMillis()));
     }
 
-    // TODO: 这个方法没有看懂，看起来是没有做任何关于aggs的下推操作
-    // TODO: 比如SQL中的where条件，这里能够下推吗？
-    // 做了选取指定field的操作
+    // Note[2020.01.23] 通过TupleDomain将where条件下推；aggs没有下推。
     private QueryBuilder buildSearchQuery()
     {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
         for (ElasticsearchColumnHandle column : columns) {
             BoolQueryBuilder columnQueryBuilder = new BoolQueryBuilder();
             Type type = column.getColumnType();
+            // Note[2020.01.23] tupleDomain 表示的是where条件, 是一个column为key,
+            //   Domain(描述的是此column的条件，如column =3, column in [10, 25])为value的Map，
+            // 如果有where条件...
             if (tupleDomain.getDomains().isPresent()) {
                 Domain domain = tupleDomain.getDomains().get().get(column);
                 if (domain != null) {
@@ -147,14 +153,17 @@ public class ElasticsearchQueryBuilder
 
     private QueryBuilder buildPredicate(String columnName, Domain domain, Type type)
     {
+        // TODO: 为什么要有isOrderable()的要求？
         checkArgument(domain.getType().isOrderable(), "Domain type must be orderable");
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
 
+        // Note[2020.01.23] 相当于 where column is null
         if (domain.getValues().isNone()) {
             boolQueryBuilder.mustNot(new ExistsQueryBuilder(columnName));
             return boolQueryBuilder;
         }
 
+        // Note[2020.01.23] 相当于 where column is not null
         if (domain.getValues().isAll()) {
             boolQueryBuilder.must(new ExistsQueryBuilder(columnName));
             return boolQueryBuilder;

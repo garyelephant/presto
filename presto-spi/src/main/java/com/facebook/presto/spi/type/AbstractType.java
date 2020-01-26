@@ -26,6 +26,7 @@ public abstract class AbstractType
         implements Type
 {
     private final TypeSignature signature;
+    // TODO: 有啥用？
     private final Class<?> javaType;
 
     protected AbstractType(TypeSignature signature, Class<?> javaType)

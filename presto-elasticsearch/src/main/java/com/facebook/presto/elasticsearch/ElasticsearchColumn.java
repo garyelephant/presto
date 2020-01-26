@@ -24,13 +24,16 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
+// TODO: ElasticsearchColumnHandle vs ElasticsearchColumn ? 看代码，像是等价关系，因为有些connector就没有XXXColumn, 只有XXXColumnHandle
 public final class ElasticsearchColumn
 {
     private final String name;
     private final Type type;
     private final String jsonPath;
     private final String jsonType;
+    // TODO: 啥意思？
     private final boolean isList;
+    // TODO：啥意思？
     private final int ordinalPosition;
 
     @JsonCreator

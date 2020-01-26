@@ -95,6 +95,7 @@ public class ElasticsearchClient
     private final ObjectMapper objecMapper = new ObjectMapperProvider().get();
     private final ElasticsearchTableDescriptionProvider tableDescriptions;
     private final Map<String, TransportClient> clients = new HashMap<>();
+    // Note[2020.01.23] Table 和 Column 元数据的缓存，定期清楚和更新缓存
     private final LoadingCache<ElasticsearchTableDescription, List<ColumnMetadata>> columnMetadataCache;
     private final Duration requestTimeout;
     private final int maxAttempts;
@@ -117,6 +118,7 @@ public class ElasticsearchClient
                 clients.put(tableDescription.getClusterName(), client);
             }
         }
+        // Note[2020.01.23] 有过期和刷新时间
         this.columnMetadataCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(30, MINUTES)
                 .refreshAfterWrite(15, MINUTES)
@@ -266,6 +268,8 @@ public class ElasticsearchClient
         return result;
     }
 
+    // Note[2020.01.23]
+    // TODO: 此处算是定时去获取mappings，可以考虑改成es listener，mappings改变后通知Presto
     private List<ElasticsearchColumn> buildColumns(ElasticsearchTableDescription tableDescription)
     {
         List<ElasticsearchColumn> columns = new ArrayList<>();
@@ -294,6 +298,7 @@ public class ElasticsearchClient
                 JsonNode mappingNode = rootNode.get(tableDescription.getType());
                 JsonNode propertiesNode = mappingNode.get("properties");
 
+                // TODO: lists 有什么用？
                 List<String> lists = new ArrayList<>();
                 JsonNode metaNode = mappingNode.get("_meta");
                 if (metaNode != null) {
@@ -305,6 +310,7 @@ public class ElasticsearchClient
                         }
                     }
                 }
+                // Note[2020.01.23] 平铺flatten json path
                 populateColumns(propertiesNode, lists, columns);
             }
         }
@@ -349,11 +355,13 @@ public class ElasticsearchClient
                 childKey = key;
             }
 
+            // Note[2020.01.23] 递归获取column metadata
             if (value.isObject()) {
                 metadata.addAll(getColumnMetadata(Optional.of(childKey), value));
                 continue;
             }
 
+            // Note[2020.01.23] 如果不是Array，输出的格式都是 key:value
             if (!value.isArray()) {
                 metadata.add(childKey.concat(":").concat(value.textValue()));
             }
@@ -366,6 +374,7 @@ public class ElasticsearchClient
         FieldNestingComparator comparator = new FieldNestingComparator();
         TreeMap<String, Type> fieldsMap = new TreeMap<>(comparator);
         for (String columnMetadata : getColumnMetadata(Optional.empty(), propertiesNode)) {
+            // Note[2020.01.23] 当columnMetadata中有":"时，说明这个字段不是array
             int delimiterIndex = columnMetadata.lastIndexOf(":");
             if (delimiterIndex == -1 || delimiterIndex == columnMetadata.length() - 1) {
                 LOG.debug("Invalid column path format: %s", columnMetadata);
@@ -381,6 +390,7 @@ public class ElasticsearchClient
             String propertyName = fieldName.substring(0, fieldName.lastIndexOf('.'));
             String nestedName = propertyName.replaceAll("properties\\.", "");
             if (nestedName.contains(".")) {
+                // Note[2020.01.23] 如果是嵌套字段，将此字段放入fieldsMap, 以供后面的processNestedFields来处理。
                 fieldsMap.put(nestedName, getPrestoType(typeName));
             }
             else {
@@ -394,6 +404,7 @@ public class ElasticsearchClient
         processNestedFields(fieldsMap, columns, arrays);
     }
 
+    // Note[2020.01.26] 以递归的方式，把所有相同名称（NestedFieldName）嵌套字段，按照嵌套层级，层层合并，最后将合并后的Top Level 字段的添加到 columns 列表中。
     private void processNestedFields(TreeMap<String, Type> fieldsMap, List<ElasticsearchColumn> columns, List<String> arrays)
     {
         if (fieldsMap.size() == 0) {
@@ -409,6 +420,7 @@ public class ElasticsearchClient
             Iterator<String> iterator = fieldsMap.navigableKeySet().iterator();
             while (iterator.hasNext()) {
                 String name = iterator.next();
+                // Note[2020.01.26] 如果后续遍历出的nestedFieldName与第一个是同一个nested level的（prefix相同，嵌套层次(size)相同）
                 if (name.split("\\.").length == size && name.startsWith(prefix)) {
                     Optional<String> columnName = Optional.of(name.substring(name.lastIndexOf('.') + 1));
                     Type columnType = fieldsMap.get(name);
@@ -417,6 +429,7 @@ public class ElasticsearchClient
                     iterator.remove();
                 }
             }
+            // Note[2020.01.26] RowType 是 Type的实现类，支持表示嵌套的类型
             fieldsMap.put(prefix, RowType.from(fieldsBuilder.build()));
         }
         else {

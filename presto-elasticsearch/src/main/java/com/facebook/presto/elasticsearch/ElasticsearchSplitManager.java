@@ -66,8 +66,6 @@ public class ElasticsearchSplitManager
 
             ImmutableMap.Builder<String, DiscoveryNode> nodeIdMapBuilder = ImmutableMap.builder();
             for (DiscoveryNode discoveryNode : nodes) {
-                // TODO: 用哪个ID？
-                // nodeIdMap.put(discoveryNode.getEphemeralId(), discoveryNode);
                 nodeIdMapBuilder.put(discoveryNode.getId(), discoveryNode);
             }
 
