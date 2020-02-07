@@ -129,6 +129,7 @@ public class ElasticsearchQueryBuilder
 
     // Note[2020.01.23] 通过TupleDomain将where条件下推；aggs没有下推。
     // TODO: Projection 能通过TupleDomain做吗？怎么做？这个对削减数据量很重要啊！
+    // TODO: 对于filter，aggregation类型字符串字段的查询，如果这个字段是multi-fields类型，有keyword类型，尽量优化成去查keyword
     private QueryBuilder buildSearchQuery()
     {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
