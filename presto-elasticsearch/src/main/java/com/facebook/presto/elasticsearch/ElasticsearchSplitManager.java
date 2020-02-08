@@ -72,7 +72,6 @@ public class ElasticsearchSplitManager
             ImmutableMap<String, DiscoveryNode> nodeIdMap = nodeIdMapBuilder.build();
 
             for (ClusterSearchShardsGroup group : response.getGroups()) {
-
                 // Note: 当Presto与ES混部署时，如何实现数据本地性？Answer: 逻辑在这里
                 // Note: ClusterSearchShardsGroup 指的shard包含primary + replica ？ 所以是 group ? 从这个类的私有成员ShardRouting列表来看是这样的
                 // TODO: 选取哪个shard副本(本质上是选取这个shard所在的Node)的逻辑也可以优化，目前先默认选择了第一个
