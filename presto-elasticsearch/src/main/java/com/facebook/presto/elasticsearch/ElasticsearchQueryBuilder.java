@@ -115,7 +115,9 @@ public class ElasticsearchQueryBuilder
                 .setFetchSource(fields.toArray(new String[0]), null)
                 // Note[2020.01.23] where 条件下推
                 .setQuery(buildSearchQuery())
-                .setPreference("_shards:" + shard) // TODO：已经指定了Preference，但是需要再增加一个 _local 参数, _shards:n|_local
+                // set preferences to prefer local shard, format: _shards:n|_local
+                // https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-request-preference.html
+                .setPreference("_shards:" + shard + "|_local")
                 .setSize(scrollSize);
         LOG.debug("Elasticsearch Request: %s", searchRequestBuilder);
         return searchRequestBuilder;
@@ -128,7 +130,10 @@ public class ElasticsearchQueryBuilder
     }
 
     // Note[2020.01.23] 通过TupleDomain将where条件下推；aggs没有下推。
-    // TODO: Projection 能通过TupleDomain做吗？怎么做？这个对削减数据量很重要啊！
+    // TODO: 1. Projection pushdown
+    //       2. Predicate(filter) pushdown 【TupleDomain仅允许多个条件以and的方式pushdown，但这样明显不够】
+    //       3. Aggregation pushdown
+    // TODO: Projection 能通过TupleDomain做吗？怎么做？这个对削减数据量很重要啊！【应该是不能】
     // TODO: 对于filter，aggregation类型字符串字段的查询，如果这个字段是multi-fields类型，有keyword类型，尽量优化成去查keyword
     private QueryBuilder buildSearchQuery()
     {
