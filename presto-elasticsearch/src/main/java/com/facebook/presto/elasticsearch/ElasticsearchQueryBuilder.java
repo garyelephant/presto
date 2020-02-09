@@ -131,9 +131,12 @@ public class ElasticsearchQueryBuilder
 
     // Note[2020.01.23] 通过TupleDomain将where条件下推；aggs没有下推。
     // TODO: 1. Projection pushdown
+    //          目前没有任何pushdown, Projection 能通过TupleDomain做吗？怎么做？这个对削减数据量很重要啊！【应该是不能】
+    //          Elasticsearch 实现方法: https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-request-source-filtering.html
     //       2. Predicate(filter) pushdown 【TupleDomain仅允许多个条件以and的方式pushdown，但这样明显不够】
+    //          目前构造Elasticsearch DSL 都是term和range，是不是过于简单粗暴
     //       3. Aggregation pushdown
-    // TODO: Projection 能通过TupleDomain做吗？怎么做？这个对削减数据量很重要啊！【应该是不能】
+    //          目前没有任何pushdown
     // TODO: 对于filter，aggregation类型字符串字段的查询，如果这个字段是multi-fields类型，有keyword类型，尽量优化成去查keyword
     private QueryBuilder buildSearchQuery()
     {
