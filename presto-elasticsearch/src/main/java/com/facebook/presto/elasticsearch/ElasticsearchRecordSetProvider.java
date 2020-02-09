@@ -27,6 +27,7 @@ import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
+// TODO: ElasticsearchRecordSetProvider vs prestosql ElasticsearchPageSourceProvider
 public class ElasticsearchRecordSetProvider
         implements ConnectorRecordSetProvider
 {

@@ -111,7 +111,7 @@ public class ElasticsearchQueryBuilder
                 .setTypes(type)
                 .setSearchType(QUERY_THEN_FETCH)
                 .setScroll(new TimeValue(scrollTimeout.toMillis()))
-                // Note[2020.01.23] select fields projection
+                // TODO: 需要验证一下 这是projection pushdown [select fields projection] ?
                 .setFetchSource(fields.toArray(new String[0]), null)
                 // Note[2020.01.23] where 条件下推
                 .setQuery(buildSearchQuery())
