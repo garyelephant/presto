@@ -1,0 +1,9 @@
+{
+  "tableName": "mytable",
+  "schemaName": "es",
+  "host": "127.0.0.1",
+  "port": "9300",
+  "clusterName": "elasticsearch",
+  "index": "idx",
+  "type": "logs"
+}

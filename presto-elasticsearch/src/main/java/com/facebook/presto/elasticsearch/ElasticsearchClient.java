@@ -281,6 +281,7 @@ public class ElasticsearchClient
             if (!isNullOrEmpty(index)) {
                 mappingsRequest.indices(index);
             }
+            // TODO: 每次去get mappings然后合并schema？另外异步load mappings时，会去load 所有index的mappings？
             ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getMappings(client, mappingsRequest);
 
             Iterator<String> indexIterator = mappings.keysIt();
@@ -363,7 +364,9 @@ public class ElasticsearchClient
 
             // Note[2020.01.23] 如果不是Array，输出的格式都是 key:value
             if (!value.isArray()) {
-                metadata.add(childKey.concat(":").concat(value.textValue()));
+                if (value.isTextual() && key.equals("type")) {
+                    metadata.add(childKey.concat(":").concat(value.textValue()));
+                }
             }
         }
         return metadata.build();
@@ -388,6 +391,12 @@ public class ElasticsearchClient
                 continue;
             }
             String propertyName = fieldName.substring(0, fieldName.lastIndexOf('.'));
+            if (propertyName.contains(".fields.")) {
+                // TODO: 去掉multi-fields的字段，schema中不显示，当用户aggregation query中出现包含multi-fields字段时（例如包含keyword类型）
+                //    可以尝试去在ES Query中优化为查keyword字段。
+                //    注意：此处会误杀field name = xx.fields.xx 的字段。
+                continue;
+            }
             String nestedName = propertyName.replaceAll("properties\\.", "");
             if (nestedName.contains(".")) {
                 // Note[2020.01.23] 如果是嵌套字段，将此字段放入fieldsMap, 以供后面的processNestedFields来处理。
@@ -436,6 +445,7 @@ public class ElasticsearchClient
             boolean newColumnFound = columns.stream()
                     .noneMatch(column -> column.getName().equalsIgnoreCase(field));
             if (newColumnFound) {
+                // TODO: 最后要用jsonType = type.getDisplayName()保存成字符串（也包括RowType的嵌套字段）？其他地方如何用这个字段，仅仅是展示吗？
                 columns.add(new ElasticsearchColumn(field, type, field, type.getDisplayName(), arrays.contains(field), -1));
             }
             fieldsMap.remove(field);

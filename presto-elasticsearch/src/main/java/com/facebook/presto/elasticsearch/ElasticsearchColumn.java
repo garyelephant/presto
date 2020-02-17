@@ -30,7 +30,7 @@ public final class ElasticsearchColumn
     private final String name;
     private final Type type;
     private final String jsonPath;
-    private final String jsonType;
+    private final String jsonType; // TODO: 这个字符串怎么用，形如：row(c5 bigint, c6 row(keyword varchar), c8 row(c10 row(keyword varchar), c9 bigint))
     // TODO: 啥意思？
     private final boolean isList;
     // TODO：啥意思？

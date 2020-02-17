@@ -100,13 +100,14 @@ public final class ElasticsearchUtils
             type.writeBoolean(builder, (Boolean) object);
         }
         else if (type.equals(BIGINT)) {
-            type.writeLong(builder, (Long) object);
+            // convert to Number first to avoid java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.Long
+            type.writeLong(builder, ((Number) object).longValue());
         }
         else if (type.equals(DOUBLE)) {
-            type.writeDouble(builder, (Double) object);
+            type.writeDouble(builder, ((Number) object).doubleValue());
         }
         else if (type.equals(INTEGER)) {
-            type.writeLong(builder, (Integer) object);
+            type.writeLong(builder, ((Number) object).intValue());
         }
         else if (type.equals(VARCHAR) || type.equals(VARBINARY)) {
             type.writeSlice(builder, utf8Slice(object.toString()));
